@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Livro — Lumos Livraria</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        @media (max-width: 768px) {
+            .card {
+                max-width: 100% !important;
+                margin: 24px 0 !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                max-width: 100% !important;
+                margin: 16px 0 !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="header-inner">
+            <a href="/dashboard" class="logo">
+                <img src="{{ url_for('static', filename='img/logo.webp') }}" alt="Lumos">
+                <div class="logo-text">Lumos <span>Livraria</span></div>
+            </a>
+            <nav>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/cadastro" class="active">Cadastros</a>
+                <a href="/vendas">Vendas</a>
+                <a href="/logout" class="nav-exit">Sair</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-header">
+        <div class="container">
+            <h1>Editar Livro</h1>
+            <p>Modifique os dados ou atualize a capa do exemplar no acervo</p>
+        </div>
+    </div>
+
+    <main class="container">
+        <div class="card animate-in" style="max-width: 650px; margin: 40px auto;">
+
+            <form action="/livro/edit/{{ livro.id }}" method="POST" enctype="multipart/form-data">
+
+                <div class="form-group">
+                    <label for="titulo">Título do Livro</label>
+                    <input type="text" id="titulo" name="titulo" value="{{ livro.titulo }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="autor">Autor</label>
+                    <input type="text" id="autor" name="autor" value="{{ livro.autor }}" required>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="preco">Preço (R$)</label>
+                        <input type="number" id="preco" step="0.01" name="preco" value="{{ livro.preco }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="estoque">Quantidade em Estoque</label>
+                        <input type="number" id="estoque" name="estoque" value="{{ livro.estoque }}" required>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="categoria_id">Categoria Única</label>
+                        <select id="categoria_id" name="categoria_id" required>
+                            <option value="">Selecione uma categoria...</option>
+                            {% for cat in categorias %}
+                            <option value="{{ cat.id }}" {% if livro.categoria_id==cat.id %}selected{% endif %}>
+                                {{ cat.nome }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="idioma_id">Idioma</label>
+                        <select id="idioma_id" name="idioma_id">
+                            <option value="">Selecione um idioma...</option>
+                            {% for idi in idiomas %}
+                            <option value="{{ idi.id }}" {% if livro.idioma_id==idi.id %}selected{% endif %}>
+                                {{ idi.nome }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="sinopse">Sinopse</label>
+                    <textarea id="sinopse" name="sinopse" rows="4" style="resize:vertical;"
+                        placeholder="Breve resumo sobre a obra de arte literária...">{{ livro.sinopse or '' }}</textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display:block; margin-bottom:8px;">Capa Atual</label>
+                    {% if livro.capa %}
+                    <div style="display:flex; align-items:center; gap:15px;">
+                        <img src="{{ url_for('static', filename='img/' + livro.capa) }}" alt="Capa Atual"
+                            style="width:80px; height:110px; object-fit:cover; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.15); border:1px solid var(--borda);">
+                        <span class="text-muted text-sm">Se desejar alterar o design frontal, escolha uma nova imagem
+                            abaixo.</span>
+                    </div>
+                    {% else %}
+                    <div style="display:flex; align-items:center; gap:15px;">
+                        <div
+                            style="width:80px; height:110px; background:#e2e8f0; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:2rem; border:1px dashed #cbd5e1;">
+                            📖
+                        </div>
+                        <span class="text-muted text-sm">Este livro ainda não possui uma capa cadastrada no
+                            sistema.</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group" style="margin-bottom: 30px;">
+                    <label for="capa">Substituir Capa (Opcional)</label>
+                    <input type="file" id="capa" name="capa" accept="image/*">
+                </div>
+
+                <div class="flex-between mt-md pt-md" style="border-top: 1px solid var(--cinza-claro); flex-wrap: wrap; gap: 12px;">
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap; flex: 2; min-width: 280px;">
+                        <button type="submit" class="btn btn-primary" style="flex: 2; min-width: 160px;">Salvar Alterações</button>
+                        <a href="/cadastro" class="btn btn-ghost" style="flex: 1; min-width: 100px;">Voltar</a>
+                    </div>
+
+                    <a href="/livro/delete/{{ livro.id }}" class="btn"
+                        style="background: rgba(220,53,69,0.1); color: #dc3545; border: 1px solid #dc3545; flex: 1; min-width: 140px; justify-content: center;"
+                        onclick="return confirm('Tem certeza que deseja excluir permanentemente este livro do catálogo?')">
+                        Excluir Livro
+                    </a>
+                </div>
+
+            </form>
+
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-inner">
+            <div class="footer-brand">Lumos Livraria</div>
+            <div class="footer-slogan">Histórias que iluminam</div>
+            <div style="font-size:0.82rem;">&copy; 2026</div>
+        </div>
+    </footer>
+
+</body>
+
+</html>

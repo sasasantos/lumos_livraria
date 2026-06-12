@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Produtos — Lumos Livraria</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* ── FILTROS ── */
+        .filters-section {
+            background: var(--branco);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--borda);
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            align-items: end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-group label {
+            margin: 0;
+        }
+
+        .filter-group input,
+        .filter-group select {
+            padding: 10px 12px;
+            border: 1.5px solid var(--cinza-claro);
+            border-radius: var(--radius);
+            background: var(--off-white);
+            color: var(--texto-escuro);
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--azul-medio);
+            background: var(--branco);
+            box-shadow: 0 0 0 3px rgba(30, 74, 122, 0.1);
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 16px;
+        }
+
+        .btn-reset {
+            padding: 10px 16px;
+            background: transparent;
+            color: var(--texto-muted);
+            border: 1.5px solid var(--cinza-claro);
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-reset:hover {
+            background: var(--cinza-claro);
+            color: var(--azul-profundo);
+        }
+
+        /* ── RESULTADOS ── */
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .results-count {
+            font-size: 0.9rem;
+            color: var(--texto-muted);
+            font-weight: 500;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 8px;
+        }
+
+        .view-btn {
+            padding: 8px 12px;
+            background: var(--cinza-claro);
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--texto-muted);
+            transition: var(--transition);
+        }
+
+        .view-btn.active {
+            background: var(--azul-profundo);
+            color: var(--off-white);
+        }
+
+        /* ── GRID DE PRODUTOS ── */
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 24px;
+            margin-bottom: 48px;
+        }
+
+        .product-card {
+            background: var(--branco);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--borda);
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .product-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-4px);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 280px;
+            background: linear-gradient(135deg, var(--azul-surface) 0%, rgba(167, 189, 214, 0.08) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+            padding: 12px;
+        }
+
+        .product-image img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            transition: var(--transition);
+            filter: drop-shadow(0 4px 8px rgba(13, 47, 79, 0.15));
+        }
+
+        .product-card:hover .product-image img {
+            transform: scale(1.08);
+            filter: drop-shadow(0 6px 12px rgba(13, 47, 79, 0.25));
+        }
+
+        .product-image-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--azul-profundo) 0%, var(--azul-medio) 100%);
+            color: var(--off-white);
+            font-size: 3rem;
+        }
+
+        .product-info {
+            padding: 18px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .product-category {
+            display: inline-block;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: var(--azul-medio);
+            margin-bottom: 6px;
+        }
+
+        .product-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--azul-profundo);
+            margin-bottom: 4px;
+            line-height: 1.3;
+            min-height: 2.6rem;
+        }
+
+        .product-author {
+            font-size: 0.8rem;
+            color: var(--texto-muted);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .product-price {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--azul-profundo);
+            margin-bottom: 8px;
+        }
+
+        .product-stock {
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            color: var(--texto-muted);
+            margin-bottom: 12px;
+        }
+
+        .stock-indicator {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        .stock-available {
+            background: #EBF5EE;
+            color: #1A7A3E;
+        }
+
+        .stock-low {
+            background: #FFF8E6;
+            color: #A07000;
+        }
+
+        .stock-unavailable {
+            background: #FCEEF0;
+            color: #C0293D;
+        }
+
+        .product-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: auto;
+        }
+
+        .btn-view {
+            flex: 1;
+            padding: 10px;
+            background: var(--azul-profundo);
+            color: var(--off-white);
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .btn-view:hover {
+            background: var(--azul-hover);
+            transform: translateY(-1px);
+        }
+
+        /* ── MODAL DE DETALHES ── */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .modal-content {
+            background: var(--branco);
+            border-radius: var(--radius-lg);
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px;
+            border-bottom: 1px solid var(--borda);
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.4rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--texto-muted);
+            transition: var(--transition);
+        }
+
+        .modal-close:hover {
+            color: var(--azul-profundo);
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .modal-book-image {
+            width: 100%;
+            height: 350px;
+            background: linear-gradient(135deg, var(--azul-surface) 0%, rgba(167, 189, 214, 0.08) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-lg);
+            margin-bottom: 20px;
+            overflow: hidden;
+            padding: 16px;
+        }
+
+        .modal-book-image img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 6px 16px rgba(13, 47, 79, 0.2));
+        }
+
+        .modal-book-image-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--azul-profundo) 0%, var(--azul-medio) 100%);
+            color: var(--off-white);
+            font-size: 4rem;
+        }
+
+        .modal-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .modal-info-item {
+            padding: 12px;
+            background: var(--off-white);
+            border-radius: var(--radius);
+            border-left: 3px solid var(--azul-profundo);
+        }
+
+        .modal-info-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: var(--texto-muted);
+            margin-bottom: 4px;
+        }
+
+        .modal-info-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--azul-profundo);
+        }
+
+        .modal-sinopse {
+            margin-bottom: 20px;
+        }
+
+        .modal-sinopse h4 {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            color: var(--azul-profundo);
+        }
+
+        .modal-sinopse p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--texto-escuro);
+            background: var(--off-white);
+            padding: 12px;
+            border-radius: var(--radius);
+            border-left: 3px solid var(--azul-claro);
+        }
+
+        /* ── ESTADO VAZIO ── */
+        .empty-state {
+            text-align: center;
+            padding: 60px 32px;
+            background: var(--branco);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--borda);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 8px;
+        }
+
+        .empty-state p {
+            color: var(--texto-muted);
+            margin-bottom: 24px;
+        }
+
+        /* ── RESPONSIVO ── */
+        @media (max-width: 768px) {
+            .filters-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-actions {
+                flex-direction: column;
+            }
+
+            .products-grid {
+                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+                gap: 16px;
+            }
+
+            .product-image {
+                height: 200px;
+            }
+
+            .results-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .products-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .modal-content {
+                width: 95%;
+                max-height: 90vh;
+            }
+
+            .modal-info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-inner">
+            <a href="/dashboard" class="logo">
+                <img src="{{ url_for('static', filename='img/logo.webp') }}" alt="Lumos">
+                <div class="logo-text">Lumos <span>Livraria</span></div>
+            </a>
+            <nav>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/cadastro">Cadastros</a>
+                <a href="/produtos" class="active">Produtos</a>
+                <a href="/vendas">Vendas</a>
+                <a href="/logout" class="nav-exit">Sair</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-header">
+        <div class="container">
+            <h1>Catálogo de Produtos</h1>
+            <p>Explore nossa coleção de livros e descubra histórias que iluminam</p>
+        </div>
+    </div>
+
+    <main class="container">
+        <!-- FILTROS -->
+        <div class="filters-section animate-in">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label for="search-input">Buscar por Título ou Autor</label>
+                    <input type="text" id="search-input" placeholder="Digite o título ou autor...">
+                </div>
+                <div class="filter-group">
+                    <label for="category-filter">Filtrar por Categoria</label>
+                    <select id="category-filter">
+                        <option value="">Todas as Categorias</option>
+                        {% for categoria in categorias %}
+                        <option value="{{ categoria.id }}">{{ categoria.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn-reset" onclick="resetarFiltros()">Limpar Filtros</button>
+            </div>
+        </div>
+
+        <!-- RESULTADOS -->
+        <div class="results-header animate-in delay-1">
+            <div class="results-count">
+                <span id="total-produtos">{{ livros|length }}</span> produto(s) encontrado(s)
+            </div>
+        </div>
+
+        <!-- GRID DE PRODUTOS -->
+        <div class="products-grid animate-in delay-1" id="products-grid">
+            {% if livros %}
+                {% for livro in livros %}
+                <div class="product-card" data-id="{{ livro.id }}" data-titulo="{{ livro.titulo }}" 
+                     data-autor="{{ livro.autor }}" data-categoria="{{ livro.categoria_id }}">
+                    <div class="product-image">
+                        {% if livro.capa %}
+                            <img src="{{ url_for('static', filename='img/' + livro.capa) }}" 
+                                 alt="{{ livro.titulo }}" onerror="this.style.display='none'">
+                        {% else %}
+                            <div class="product-image-placeholder">📚</div>
+                        {% endif %}
+                    </div>
+                    <div class="product-info">
+                        {% if livro.categoria %}
+                            <span class="product-category">{{ livro.categoria.nome }}</span>
+                        {% endif %}
+                        <h3 class="product-title">{{ livro.titulo }}</h3>
+                        <p class="product-author">{{ livro.autor }}</p>
+                        <div class="product-price">R$ {{ "%.2f"|format(livro.preco) }}</div>
+                        <div class="product-stock">
+                            {% if livro.estoque > 10 %}
+                                <span class="stock-indicator stock-available">Em Estoque ({{ livro.estoque }})</span>
+                            {% elif livro.estoque > 0 %}
+                                <span class="stock-indicator stock-low">Últimas Unidades ({{ livro.estoque }})</span>
+                            {% else %}
+                                <span class="stock-indicator stock-unavailable">Indisponível</span>
+                            {% endif %}
+                        </div>
+                        <div class="product-actions">
+                            <button class="btn-view" onclick="abrirDetalhes({{ livro.id }})">Ver Detalhes</button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state" style="grid-column: 1 / -1;">
+                    <div class="empty-state-icon">📚</div>
+                    <h3>Nenhum livro encontrado</h3>
+                    <p>Não há produtos disponíveis no catálogo no momento.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- ESTADO VAZIO (Filtros) -->
+        <div id="empty-state-filtered" class="empty-state" style="display: none; grid-column: 1 / -1;">
+            <div class="empty-state-icon">🔍</div>
+            <h3>Nenhum livro encontrado</h3>
+            <p>Tente ajustar seus filtros ou fazer uma nova busca.</p>
+            <button class="btn-reset" onclick="resetarFiltros()">Limpar Filtros</button>
+        </div>
+    </main>
+
+    <!-- MODAL DE DETALHES -->
+    <div id="modal-detalhes" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-titulo">Detalhes do Livro</h2>
+                <button class="modal-close" onclick="fecharModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-book-image" id="modal-image">
+                    <div class="modal-book-image-placeholder">📚</div>
+                </div>
+                <div class="modal-info-grid">
+                    <div class="modal-info-item">
+                        <div class="modal-info-label">Autor</div>
+                        <div class="modal-info-value" id="modal-autor">-</div>
+                    </div>
+                    <div class="modal-info-item">
+                        <div class="modal-info-label">Preço</div>
+                        <div class="modal-info-value" id="modal-preco">-</div>
+                    </div>
+                    <div class="modal-info-item">
+                        <div class="modal-info-label">Categoria</div>
+                        <div class="modal-info-value" id="modal-categoria">-</div>
+                    </div>
+                    <div class="modal-info-item">
+                        <div class="modal-info-label">Estoque</div>
+                        <div class="modal-info-value" id="modal-estoque">-</div>
+                    </div>
+                </div>
+                <div class="modal-sinopse" id="modal-sinopse-container" style="display: none;">
+                    <h4>Sinopse</h4>
+                    <p id="modal-sinopse">-</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-inner">
+            <div class="footer-brand">Lumos Livraria</div>
+            <div class="footer-slogan">Histórias que iluminam</div>
+            <div class="text-sm">&copy; 2026</div>
+        </div>
+    </footer>
+
+    <script>
+        // Dados dos livros do backend
+        const livrosData = [
+            {% for livro in livros %}
+            {
+                id: {{ livro.id }},
+                titulo: "{{ livro.titulo }}",
+                autor: "{{ livro.autor }}",
+                preco: {{ livro.preco }},
+                estoque: {{ livro.estoque }},
+                categoria_id: {{ livro.categoria_id or 'null' }},
+                categoria_nome: "{{ livro.categoria.nome if livro.categoria else 'Sem Categoria' }}",
+                capa: "{{ livro.capa or '' }}",
+                sinopse: "{{ livro.sinopse or '' }}"
+            }{{ "," if not loop.last else "" }}
+            {% endfor %}
+        ];
+
+        function aplicarFiltros() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const categoryId = document.getElementById('category-filter').value;
+            const cards = document.querySelectorAll('.product-card');
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                const titulo = card.getAttribute('data-titulo').toLowerCase();
+                const autor = card.getAttribute('data-autor').toLowerCase();
+                const categoria = card.getAttribute('data-categoria');
+
+                const matchesSearch = titulo.includes(searchTerm) || autor.includes(searchTerm);
+                const matchesCategory = !categoryId || categoria === categoryId;
+
+                if (matchesSearch && matchesCategory) {
+                    card.style.display = '';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // Atualizar contagem
+            document.getElementById('total-produtos').textContent = visibleCount;
+
+            // Mostrar estado vazio se necessário
+            if (visibleCount === 0) {
+                document.getElementById('empty-state-filtered').style.display = 'block';
+            } else {
+                document.getElementById('empty-state-filtered').style.display = 'none';
+            }
+        }
+
+        function resetarFiltros() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('category-filter').value = '';
+            document.getElementById('empty-state-filtered').style.display = 'none';
+            document.getElementById('total-produtos').textContent = document.querySelectorAll('.product-card').length;
+            document.querySelectorAll('.product-card').forEach(card => {
+                card.style.display = '';
+            });
+        }
+
+        function abrirDetalhes(livroId) {
+            const livro = livrosData.find(l => l.id === livroId);
+            if (!livro) return;
+
+            // Preencher modal
+            document.getElementById('modal-titulo').textContent = livro.titulo;
+            document.getElementById('modal-autor').textContent = livro.autor;
+            document.getElementById('modal-preco').textContent = 'R$ ' + livro.preco.toFixed(2);
+            document.getElementById('modal-categoria').textContent = livro.categoria_nome;
+            
+            // Estoque
+            let estoqueText = '';
+            if (livro.estoque > 10) {
+                estoqueText = `Em Estoque (${livro.estoque})`;
+            } else if (livro.estoque > 0) {
+                estoqueText = `Últimas Unidades (${livro.estoque})`;
+            } else {
+                estoqueText = 'Indisponível';
+            }
+            document.getElementById('modal-estoque').textContent = estoqueText;
+
+            // Sinopse
+            if (livro.sinopse && livro.sinopse.trim()) {
+                document.getElementById('modal-sinopse').textContent = livro.sinopse;
+                document.getElementById('modal-sinopse-container').style.display = 'block';
+            } else {
+                document.getElementById('modal-sinopse-container').style.display = 'none';
+            }
+
+            // Imagem
+            const imageContainer = document.getElementById('modal-image');
+            imageContainer.innerHTML = '';
+            if (livro.capa) {
+                const img = document.createElement('img');
+                img.src = '/static/img/' + livro.capa;
+                img.alt = livro.titulo;
+                img.onerror = function() {
+                    imageContainer.innerHTML = '<div class="modal-book-image-placeholder">📚</div>';
+                };
+                imageContainer.appendChild(img);
+            } else {
+                imageContainer.innerHTML = '<div class="modal-book-image-placeholder">📚</div>';
+            }
+
+            // Mostrar modal
+            document.getElementById('modal-detalhes').classList.add('show');
+        }
+
+        function fecharModal() {
+            document.getElementById('modal-detalhes').classList.remove('show');
+        }
+
+        // Fechar modal ao clicar fora
+        window.onclick = function(event) {
+            const modal = document.getElementById('modal-detalhes');
+            if (event.target === modal) {
+                fecharModal();
+            }
+        };
+
+        // Busca em tempo real
+        document.getElementById('search-input').addEventListener('keyup', function() {
+            aplicarFiltros();
+        });
+
+        // Filtro de categoria em tempo real
+        document.getElementById('category-filter').addEventListener('change', function() {
+            aplicarFiltros();
+        });
+    </script>
+</body>
+
+</html>

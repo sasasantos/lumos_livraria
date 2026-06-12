@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Lumos Livraria</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+
+<body>
+    <header>
+        <div class="header-inner">
+            <a href="/dashboard" class="logo">
+                <img src="{{ url_for('static', filename='img/logo.webp') }}" alt="Lumos">
+                <div class="logo-text">Lumos <span>Livraria</span></div>
+            </a>
+            <nav>
+                <a href="/dashboard" class="active">Dashboard</a>
+                <a href="/cadastro">Cadastros</a>
+                <a href="/produtos">Produtos</a>
+                <a href="/vendas">Vendas</a>
+                <a href="/logout" class="nav-exit">Sair</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-header">
+        <div class="container">
+            <h1>Visão Geral</h1>
+            <p id="data-atual"></p>
+        </div>
+    </div>
+
+    <main class="container">
+        <div class="stats-grid">
+            <div class="card stat-card animate-in">
+                <div class="stat-icon">📚</div>
+                <div class="stat-value" id="stat-livros">{{ total_livros|default(0) }}</div>
+                <div class="stat-label">Total de Livros</div>
+            </div>
+            <div class="card stat-card animate-in delay-1">
+                <div class="stat-icon">👥</div>
+                <div class="stat-value" id="stat-clientes">{{ total_clientes|default(0) }}</div>
+                <div class="stat-label">Clientes Cadastrados</div>
+            </div>
+            <div class="card stat-card animate-in delay-2">
+                <div class="stat-icon">💰</div>
+                <div class="stat-value" id="stat-vendas">R$ {{ "%.2f"|format(total_vendas_valor|default(0.0)) }}</div>
+                <div class="stat-label">Vendas do Mês</div>
+            </div>
+            <div class="card stat-card animate-in delay-3">
+                <div class="stat-icon">📦</div>
+                <div class="stat-value" id="stat-pendentes">{{ pedidos_pendentes|default(0) }}</div>
+                <div class="stat-label">Pedidos Pendentes</div>
+            </div>
+        </div>
+
+        <div id="dados-grafico" data-labels='{{ grafico_labels | safe }}' data-valores='{{ grafico_valores | safe }}'>
+        </div>
+
+        <div class="card animate-in delay-3">
+            <h3>Vendas por Categoria</h3>
+            <p class="text-muted text-sm">Acompanhamento do volume de livros vendidos por categoria</p>
+            <div class="chart-container">
+                <canvas id="graficoVendas"></canvas>
+            </div>
+        </div>
+
+        <div class="animate-in delay-4 mt-lg">
+            <div class="section-header">
+                <div>
+                    <h2>Últimos Pedidos</h2>
+                    <p class="text-muted text-sm">Acompanhe as vendas recentes</p>
+                </div>
+                <a href="/vendas" class="btn btn-primary">+ Nova Venda</a>
+            </div>
+
+            <div class="card">
+                <div class="table-container">
+                    <table id="tabela-vendas">
+                        <thead>
+                            <tr>
+                                <th>Pedido</th>
+                                <th>Cliente</th>
+                                <th>Livro</th>
+                                <th>Data</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for venda in vendas_lista %}
+                            <tr>
+                                <td><strong>#{{ venda.id }}</strong></td>
+                                <td>{{ venda.cliente_nome }}</td>
+                                <td class="text-muted text-sm">
+                                    {% for item in venda.itens %}
+                                    {{ item.livro.titulo }} (x{{ item.quantidade }}){% if not loop.last %}, {% endif %}
+                                    {% else %}
+                                    Nenhum item listado
+                                    {% endfor %}
+                                </td>
+                                <td>{{ venda.data.strftime('%d/%m/%Y') }}</td>
+                                <td><strong>R$ {{ "%.2f"|format(venda.total) }}</strong></td>
+                                <td>
+                                    {% if venda.status == 'Concluído' %}
+                                    <span class="badge badge-success">Concluído</span>
+                                    {% elif venda.status == 'Pendente' %}
+                                    <span class="badge badge-warning">Pendente</span>
+                                    {% else %}
+                                    <span class="badge badge-error">Cancelado</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: var(--texto-muted); padding: 20px;">
+                                    Nenhuma venda cadastrada no sistema até o momento.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-inner">
+            <div class="footer-brand">Lumos Livraria</div>
+            <div class="footer-slogan">Histórias que iluminam</div>
+            <div class="text-sm">&copy; 2026</div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Atualizar data
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('data-atual').textContent = new Date().toLocaleDateString('pt-BR', options);
+
+            const ctx = document.getElementById('graficoVendas');
+            if (!ctx) return;
+
+            const containerDados = document.getElementById('dados-grafico');
+            let labelsBanco = [];
+            let valoresBanco = [];
+
+            if (containerDados) {
+                try {
+                    labelsBanco = JSON.parse(containerDados.getAttribute('data-labels') || '[]');
+                    valoresBanco = JSON.parse(containerDados.getAttribute('data-valores') || '[]');
+                } catch (e) {
+                    console.error("Erro ao ler atributos do gráfico:", e);
+                }
+            }
+
+            if (labelsBanco.length === 0) {
+                labelsBanco = ["Sem Dados"];
+                valoresBanco = [0];
+            }
+
+            const context = ctx.getContext('2d');
+            const gradient = context.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, '#0D2F4F'); // --azul-profundo
+            gradient.addColorStop(1, '#1E4A7A'); // --azul-medio
+
+            const chart = new Chart(context, {
+                type: 'bar',
+                data: {
+                    labels: labelsBanco,
+                    datasets: [{
+                        label: 'Livros Vendidos',
+                        data: valoresBanco,
+                        backgroundColor: gradient,
+                        borderColor: '#0D2F4F',
+                        borderWidth: 1,
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#5A7491'
+                            },
+                            grid: {
+                                color: 'rgba(167, 189, 214, 0.2)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#5A7491',
+                                font: {
+                                    weight: '500'
+                                }
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Configuração do Socket.IO
+            const socket = io();
+
+            socket.on('atualizar_dashboard', function(data) {
+                console.log('Evento recebido:', data.mensagem);
+                
+                // Buscar dados atualizados via API
+                fetch('/api/stats')
+                    .then(response => response.json())
+                    .then(stats => {
+                        // Atualizar indicadores
+                        document.getElementById('stat-livros').textContent = stats.total_livros;
+                        document.getElementById('stat-clientes').textContent = stats.total_clientes;
+                        document.getElementById('stat-vendas').textContent = 'R$ ' + stats.total_vendas_valor.toFixed(2);
+                        document.getElementById('stat-pendentes').textContent = stats.pedidos_pendentes;
+
+                        // Atualizar gráfico
+                        chart.data.labels = stats.grafico_labels;
+                        chart.data.datasets[0].data = stats.grafico_valores;
+                        chart.update();
+                        
+                        // Opcional: Recarregar a página se quiser atualizar a tabela de últimos pedidos
+                        // window.location.reload();
+                    })
+                    .catch(err => console.error('Erro ao atualizar estatísticas:', err));
+            });
+        });
+    </script>
+</body>
+
+</html>

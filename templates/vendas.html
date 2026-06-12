@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendas — Lumos Livraria</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        .flash-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+
+        .flash-success {
+            color: #28a745;
+            background: rgba(40, 167, 69, 0.1);
+            border: 1px solid #28a745;
+        }
+
+        .flash-error {
+            color: #dc3545;
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid #dc3545;
+        }
+
+        .venda-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 28px;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .venda-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .carrinho-card {
+                position: static !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .venda-layout {
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-inner">
+            <a href="/dashboard" class="logo">
+                <img src="{{ url_for('static', filename='img/logo.webp') }}" alt="Lumos">
+                <div class="logo-text">Lumos <span>Livraria</span></div>
+            </a>
+            <nav>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/cadastro">Cadastros</a>
+                <a href="/produtos">Produtos</a>
+                <a href="/vendas" class="active">Vendas</a>
+                <a href="/logout" class="nav-exit">Sair</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-header">
+        <div class="container">
+            <h1>Registrar Venda</h1>
+            <p>Preencha os dados do comprador e adicione os livros ao carrinho</p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            {% if category == 'error' or category == 'danger' %}
+            <div class="flash-message flash-error">❌ {{ message }}</div>
+            {% else %}
+            <div class="flash-message flash-success">✓ {{ message }}</div>
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <main class="container">
+        <div class="venda-layout">
+
+            <div class="card animate-in">
+                <h3>Detalhes da Venda</h3>
+                <p class="text-muted text-sm" style="margin-bottom:22px;margin-top:-4px;">Preencha as informações abaixo</p>
+
+                <form id="venda-form" action="/venda/add" method="POST" onsubmit="return validarCarrinho()">
+                    <div class="form-group">
+                        <label for="cliente_nome">Nome do Comprador</label>
+                        <input type="text" id="cliente_nome" name="cliente_nome" placeholder="Digite o nome completo" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="endereco">Endereço de Entrega (CEP, Bairro, Rua, Nº)</label>
+                        <input type="text" id="endereco" name="endereco" placeholder="Ex: 00000-000, Centro, Rua A, 123" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="status">Status do Pedido</label>
+                        <select id="status" name="status" required>
+                            <option value="Concluído">Concluído</option>
+                            <option value="Pendente">Pendente</option>
+                            <option value="Cancelado">Cancelado</option>
+                        </select>
+                    </div>
+
+                    <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--cinza-claro);">
+
+                    <div class="form-group">
+                        <label for="categoria_filtro">Filtrar por Categoria</label>
+                        <select id="categoria_filtro" onchange="filtrarLivros()">
+                            <option value="">Selecione uma categoria primeiro...</option>
+                            {% for cat in categorias %}
+                            <option value="{{ cat.id }}">{{ cat.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="livro_venda">Livro</label>
+                        <select id="livro_venda" name="livro_id" onchange="atualizarPreview()" disabled>
+                            <option value="">Selecione um livro...</option>
+                            {% for livro in livros %}
+                            <option value="{{ livro.id }}" data-preco="{{ livro.preco }}" data-autor="{{ livro.autor }}"
+                                data-cat="{{ livro.categoria_id }}" data-estoque="{{ livro.estoque }}"
+                                data-capa="{{ livro.capa if livro.capa else '' }}">
+                                {{ livro.titulo }} (Estoque: {{ livro.estoque }}) — R$ {{ "%.2f"|format(livro.preco) }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div id="book-preview" style="display:none;padding:14px;background:var(--azul-surface);border-radius:8px;border:1px solid var(--borda);margin-bottom:1.3rem;">
+                        <div style="font-size:0.8rem;color:var(--texto-muted);margin-bottom:8px;letter-spacing:0.5px;font-weight:600;">
+                            LIVRO SELECIONADO
+                        </div>
+
+                        <div style="display:flex; gap:14px; align-items:center;">
+                            <div id="preview-capa-container" style="flex-shrink:0;"></div>
+
+                            <div style="flex:1;">
+                                <div id="preview-titulo" style="font-weight:600;color:var(--azul-profundo);font-size:1rem;margin-bottom:2px;"></div>
+                                <div id="preview-autor" style="font-size:0.82rem;color:var(--texto-muted); margin-bottom: 4px;"></div>
+                                <div id="preview-estoque" style="font-size:0.85rem; font-weight:bold;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="quantidade">Quantidade</label>
+                        <input type="number" id="quantidade" value="1" min="1" oninput="atualizarPreview()">
+                    </div>
+
+                    <div class="flex-between mt-md pt-md" style="border-top: 1px solid var(--cinza-claro); flex-wrap: wrap; gap: 12px;">
+                        <button type="button" class="btn btn-ghost" onclick="window.location='/dashboard'" style="flex: 1; min-width: 100px;">Cancelar</button>
+                        <button type="button" class="btn btn-secondary" id="btn-adicionar" style="flex: 1; min-width: 160px;">+ Adicionar</button>
+
+                        <input type="hidden" name="total" id="total_input" value="0.00">
+                        <input type="hidden" name="carrinho_json" id="carrinho_json" value="">
+
+                        <button type="submit" class="btn btn-primary" style="flex: 1; min-width: 160px;">Finalizar Venda</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card animate-in delay-1 carrinho-card" style="position:sticky;top:80px;">
+                <h3>Carrinho de Compras</h3>
+
+                <div id="items-list" style="margin:14px 0;min-height:44px;">
+                    <p class="text-muted text-sm">O carrinho está vazio.</p>
+                </div>
+
+                <hr class="divider">
+
+                <div class="sale-summary-row">
+                    <span>Subtotal</span>
+                    <span id="subtotal">R$ 0,00</span>
+                </div>
+                <div class="sale-summary-row">
+                    <span>Desconto</span>
+                    <span style="color:var(--azul-claro);">—</span>
+                </div>
+                <div class="sale-summary-row" style="padding-top:12px;">
+                    <span style="font-weight:600;color:var(--texto-escuro);">Total</span>
+                    <span class="sale-summary-total" id="total">R$ 0,00</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-inner">
+            <div class="footer-brand">Lumos Livraria</div>
+            <div class="footer-slogan">Histórias que iluminam</div>
+            <div style="font-size:0.82rem;">&copy; 2026</div>
+        </div>
+    </footer>
+
+    <script>
+        const livroSelect = document.getElementById('livro_venda');
+        const catFiltro = document.getElementById('categoria_filtro');
+        const qtdInput = document.getElementById('quantidade');
+        const totalEl = document.getElementById('total');
+        const subtotalEl = document.getElementById('subtotal');
+        const itemsList = document.getElementById('items-list');
+        const btnAdd = document.getElementById('btn-adicionar');
+        const previewBox = document.getElementById('book-preview');
+        const previewTit = document.getElementById('preview-titulo');
+        const previewAut = document.getElementById('preview-autor');
+        const previewEstoque = document.getElementById('preview-estoque');
+        const previewCapa = document.getElementById('preview-capa-container');
+        const totalInput = document.getElementById('total_input');
+        const carrinhoJsonInput = document.getElementById('carrinho_json');
+
+        let items = [];
+
+        const fmt = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+
+        function filtrarLivros() {
+            const cat = catFiltro.value;
+            const options = livroSelect.querySelectorAll('option');
+
+            if (!cat) {
+                livroSelect.value = '';
+                livroSelect.disabled = true;
+                previewBox.style.display = 'none';
+                return;
+            }
+
+            options.forEach(opt => {
+                if (!opt.value) return;
+                const match = opt.dataset.cat === cat;
+                opt.hidden = !match;
+                opt.disabled = !match;
+            });
+
+            livroSelect.value = '';
+            livroSelect.disabled = false;
+            previewBox.style.display = 'none';
+        }
+
+        function atualizarPreview() {
+            const opt = livroSelect.options[livroSelect.selectedIndex];
+            if (!opt || !opt.value) { previewBox.style.display = 'none'; return; }
+
+            previewBox.style.display = 'block';
+            const nome = opt.text.split(' (Estoque:')[0];
+            previewTit.textContent = nome;
+            previewAut.textContent = opt.dataset.autor || '';
+
+            const estoqueDisponivel = parseInt(opt.dataset.estoque || 0);
+            const qtdSolicitada = parseInt(qtdInput.value || 1);
+
+            const itemExistente = items.find(it => it.id === parseInt(opt.value));
+            const qtdNoCarrinhoAtual = itemExistente ? itemExistente.qtd : 0;
+            const qtdTotalPretendida = qtdNoCarrinhoAtual + qtdSolicitada;
+
+            if (qtdTotalPretendida > estoqueDisponivel) {
+                previewEstoque.innerHTML = `⚠️ Quantidade indisponível! Estoque: ${estoqueDisponivel} un. ${qtdNoCarrinhoAtual > 0 ? `(Você já tem ${qtdNoCarrinhoAtual} no carrinho)` : ''}`;
+                previewEstoque.style.color = '#e53e3e';
+                btnAdd.disabled = true;
+                btnAdd.style.opacity = '0.5';
+                btnAdd.style.cursor = 'not-allowed';
+            } else {
+                previewEstoque.textContent = `Em estoque: ${estoqueDisponivel} un.`;
+                previewEstoque.style.color = '#2b6cb0';
+                btnAdd.disabled = false;
+                btnAdd.style.opacity = '1';
+                btnAdd.style.cursor = 'pointer';
+            }
+
+            const nomeArquivoCapa = opt.dataset.capa;
+            if (nomeArquivoCapa && nomeArquivoCapa.trim() !== '') {
+                previewCapa.innerHTML = `<img src="/static/img/${nomeArquivoCapa}" alt="Capa" style="width:45px; height:60px; object-fit:cover; border-radius:4px; box-shadow:0 2px 4px rgba(0,0,0,0.15); border:1px solid rgba(0,0,0,0.05);">`;
+            } else {
+                previewCapa.innerHTML = `<div style="width:45px; height:60px; background:#e2e8f0; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:1.4rem; border:1px dashed #cbd5e1;">📖</div>`;
+            }
+
+            const preco = parseFloat(opt.dataset.preco || 0);
+            subtotalEl.textContent = fmt(preco * qtdSolicitada);
+        }
+
+        function renderItems() {
+            if (!items.length) {
+                itemsList.innerHTML = '<p class="text-muted text-sm">O carrinho está vazio.</p>';
+                return;
+            }
+            itemsList.innerHTML = items.map((it, i) => `
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--cinza-claro);font-size:0.84rem;">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:600;color:var(--azul-profundo);">${it.nome}</div>
+                        <div style="color:var(--texto-muted);font-size:0.78rem;">Qtd: ${it.qtd} × ${fmt(it.preco)}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;margin-left:8px;flex-shrink:0;">
+                        <strong style="color:var(--azul-profundo);">${fmt(it.preco * it.qtd)}</strong>
+                        <button type="button" onclick="removeItem(${i})" style="background:none;border:none;cursor:pointer;color:var(--azul-claro);font-size:1.1rem;">×</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateTotal() {
+            const t = items.reduce((s, it) => s + it.preco * it.qtd, 0);
+            totalEl.textContent = fmt(t);
+            subtotalEl.textContent = fmt(t);
+            totalInput.value = t.toFixed(2);
+            carrinhoJsonInput.value = JSON.stringify(items);
+        }
+
+        function removeItem(i) {
+            items.splice(i, 1);
+            renderItems();
+            updateTotal();
+            atualizarPreview();
+        }
+
+        function validarCarrinho() {
+            if (items.length === 0) {
+                alert('O carrinho está vazio! Adicione pelo menos um livro antes de finalizar a venda.');
+                return false;
+            }
+            return true;
+        }
+
+        btnAdd.addEventListener('click', () => {
+            const opt = livroSelect.options[livroSelect.selectedIndex];
+            if (!opt || !opt.value) {
+                alert('Por favor, selecione um livro para adicionar ao carrinho.');
+                return;
+            }
+
+            const id = parseInt(opt.value);
+            const preco = parseFloat(opt.dataset.preco || 0);
+            const qtdSolicitada = parseInt(qtdInput.value || 1);
+            const estoqueDisponivel = parseInt(opt.dataset.estoque || 0);
+            const nome = opt.text.split(' (Estoque:')[0];
+
+            const itemExistente = items.find(it => it.id === id);
+            const qtdNoCarrinhoAtual = itemExistente ? itemExistente.qtd : 0;
+            const qtdTotalFutura = qtdNoCarrinhoAtual + qtdSolicitada;
+
+            if (qtdTotalFutura > estoqueDisponivel) {
+                alert(`Ação bloqueada! Estoque insuficiente para "${nome}".\nDisponível: ${estoqueDisponivel} un.\nSolicitado total: ${qtdTotalFutura} un.`);
+                return;
+            }
+
+            if (itemExistente) {
+                itemExistente.qtd += qtdSolicitada;
+            } else {
+                items.push({ id: id, nome: nome, preco: preco, qtd: qtdSolicitada });
+            }
+
+            renderItems();
+            updateTotal();
+
+            // CORREÇÃO: Reseta o select e o filtro mas NÃO desativa o campo de livro.
+            livroSelect.value = '';
+            livroSelect.disabled = true; // Volta a ficar desativado até escolher uma categoria novamente
+            catFiltro.value = '';
+            qtdInput.value = 1;
+            previewBox.style.display = 'none';
+        });
+    </script>
+</body>
+
+</html>

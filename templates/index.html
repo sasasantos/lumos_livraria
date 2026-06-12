@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — Lumos Livraria</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <div class="login-page">
+        <div class="login-container">
+            <div class="login-hero">
+                <div class="login-hero-content">
+                    <div class="brand">
+                        <img src="{{ url_for('static', filename='img/logo.webp') }}" alt="Lumos Livraria">
+                        <div class="brand-name">Lumos <span>Livraria</span></div>
+                    </div>
+                    <h2>Sua livraria,<br>bem organizada.</h2>
+                    <p>Gerencie seu acervo, cadastre clientes e acompanhe vendas em um só lugar.</p>
+                    <div class="login-tags">
+                        <span class="login-tag">📚 Gestão de Acervo</span>
+                        <span class="login-tag">🛒 Controle de Vendas</span>
+                        <span class="login-tag">👥 CRM de Clientes</span>
+                        <span class="login-tag">📊 Dashboard</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="login-form-side">
+                <div class="login-form-inner animate-in">
+                    <h3>Bem-vindo de volta</h3>
+                    <p class="login-subtitle">Entre com suas credenciais para acessar o painel</p>
+
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                    {% for category, message in messages %}
+                    <div
+                        style="color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 0.85rem; text-align: center; border: 1px solid #ff4d4d;">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    {% endwith %}
+
+                    <form action="/login" method="POST">
+                        <div class="form-group">
+                            <label for="email">E-mail</label>
+                            <input type="email" id="email" name="email" placeholder="seu@email.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Senha</label>
+                            <input type="password" id="password" name="senha" placeholder="••••••••" required>
+                        </div>
+                        <div style="display:flex;justify-content:flex-end;margin-bottom:1.5rem;margin-top:-0.4rem;">
+                            <a href="#" style="font-size:0.82rem;color:var(--azul-medio);text-decoration:none;">Esqueceu
+                                a senha?</a>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-full"
+                            style="justify-content:center; padding: 13px;">
+                            Entrar no Painel
+                        </button>
+                    </form>
+
+                    <p style="text-align:center;margin-top:2.5rem;font-size:0.77rem;color:var(--azul-claro);">
+                        Lumos Livraria &copy; 2026 · Histórias que iluminam
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

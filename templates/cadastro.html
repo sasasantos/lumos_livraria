@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastros — Lumos Livraria</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .tab-content.active {
+            animation: fadeIn .25s ease both;
+        }
+
+        @media (max-width: 768px) {
+            .tab-content {
+                padding: 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .tab-content {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="header-inner">
+            <a href="/dashboard" class="logo">
+                <img src="{{ url_for('static', filename='img/logo.webp') }}" alt="Lumos">
+                <div class="logo-text">
+                    Lumos <span>Livraria</span>
+                </div>
+            </a>
+            <nav>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/cadastro" class="active">Cadastros</a>
+                <a href="/produtos" >Produtos</a>
+                <a href="/vendas">Vendas</a>
+                <a href="/logout" class="nav-exit">Sair</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-header">
+        <div class="container">
+            <h1>Novo Cadastro</h1>
+            <p>Adicione livros ou clientes ao sistema</p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div
+                style="color: #28a745; background: rgba(40,167,69,0.1); padding: 12px; border-radius: 8px; margin-top: 15px; font-size: 0.9rem; border: 1px solid #28a745; animation: fadeIn 0.3s ease;">
+                ✓ {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <main class="container">
+        <div class="animate-in">
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="openTab('livro',this)">
+                    📚 Livro
+                </button>
+                <button class="tab-btn" onclick="openTab('cliente',this)">
+                    👤 Cliente
+                </button>
+            </div>
+
+            <div id="livro" class="card tab-content active">
+                <div class="flex-between mb-md" style="align-items: flex-start;">
+                    <div>
+                        <h3 class="mb-sm">Cadastrar Novo Livro</h3>
+                        <p class="text-muted text-sm">Preencha as informações do título</p>
+                    </div>
+                    <span style="font-size:2rem;">📖</span>
+                </div>
+
+                <form id="form-livro" action="/livro/add" method="POST" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="titulo">Título do Livro</label>
+                        <input type="text" id="titulo" name="titulo" placeholder="Ex: O Senhor dos Anéis" required>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="autor">Autor</label>
+                            <input type="text" id="autor" name="autor" placeholder="Ex: J.R.R. Tolkien" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="isbn">ISBN</label>
+                            <input type="text" id="isbn" name="isbn" placeholder="978-xxxxxxxxxx">
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="categoria">Categoria</label>
+                            <select id="categoria" name="categoria_id">
+                                <option value="">Selecione...</option>
+                                {% for cat in categorias %}
+                                <option value="{{ cat.id }}">{{ cat.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editora">Editora</label>
+                            <input type="text" id="editora" name="editora" placeholder="Ex: Companhia das Letras">
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="ano">Ano de Publicação</label>
+                            <input type="number" id="ano" name="ano" placeholder="Ex: 2023" min="1000" max="2099">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="idioma">Idioma</label>
+                            <select id="idioma" name="idioma_id">
+                                <option value="">Selecione...</option>
+                                {% for idi in idiomas %}
+                                <option value="{{ idi.id }}">{{ idi.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="preco">Preço (R$)</label>
+                            <input type="number" id="preco" name="preco" step="0.01" min="0" placeholder="0,00"
+                                required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="estoque">Qtd. em Estoque</label>
+                            <input type="number" id="estoque" name="estoque" min="0" placeholder="0" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sinopse">Sinopse</label>
+                        <textarea id="sinopse" name="sinopse" rows="3" placeholder="Breve descrição do livro..."
+                            style="resize:vertical;"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="capa">Capa do Livro</label>
+                        <input type="file" id="capa" name="capa" accept="image/*">
+                    </div>
+
+                    <div class="flex-between mt-md pt-md" style="border-top: 1px solid var(--cinza-claro); flex-wrap: wrap; gap: 12px;">
+                        <button type="button" class="btn btn-ghost"
+                            onclick="document.getElementById('form-livro').reset()" style="flex:1; min-width: 140px;">
+                            Limpar
+                        </button>
+                        <button type="submit" class="btn btn-primary" style="flex:1; min-width: 140px;">
+                            Salvar Livro
+                        </button>
+                    </div>
+                </form>
+
+                <hr style="margin:30px 0;">
+
+                <h3>Gerenciar Livro</h3>
+                <form method="GET" action="/editar_livro">
+                    <div class="form-group">
+                        <label>Selecione um Livro</label>
+                        <select name="id" required>
+                            <option value="">Selecione...</option>
+                            {% for livro in livros %}
+                            <option value="{{ livro.id }}">{{ livro.titulo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        Editar / Excluir Livro
+                    </button>
+                </form>
+            </div>
+
+            <div id="cliente" class="card tab-content">
+                <div class="flex-between mb-md" style="align-items: flex-start;">
+                    <div>
+                        <h3 class="mb-sm">Cadastrar Novo Cliente</h3>
+                        <p class="text-muted text-sm">Adicione um cliente ao sistema</p>
+                    </div>
+                    <span style="font-size:2rem;">🙋</span>
+                </div>
+
+                <form id="form-cliente" action="/cliente/add" method="POST">
+                    <div class="form-group">
+                        <label for="nome">Nome Completo</label>
+                        <input type="text" id="nome" name="nome" placeholder="Ex: Maria Oliveira" required>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="email_cliente">E-mail</label>
+                            <input type="email" id="email_cliente" name="email" placeholder="maria@email.com" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="telefone">Telefone</label>
+                            <input type="tel" id="telefone" name="telefone" placeholder="(11) 99999-9999">
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="cpf">CPF</label>
+                            <input type="text" id="cpf" name="cpf" placeholder="000.000.000-00">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="nascimento">Data de Nascimento</label>
+                            <input type="date" id="nascimento" name="nascimento">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="genero_favorito">Gênero Literário Favorito</label>
+                        <select id="genero_favorito" name="genero_favorito">
+                            <option value="">Selecione...</option>
+                            {% for cat in categorias %}
+                            <option value="{{ cat.nome }}">{{ cat.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="observacoes">Observações</label>
+                        <textarea id="observacoes" name="observacoes" rows="3" style="resize:vertical;"
+                            placeholder="Preferências ou notas extras sobre o cliente..."></textarea>
+                    </div>
+
+                    <div class="flex-between mt-md pt-md" style="border-top: 1px solid var(--cinza-claro); flex-wrap: wrap; gap: 12px;">
+                        <button type="button" class="btn btn-ghost"
+                            onclick="document.getElementById('form-cliente').reset()" style="flex:1; min-width: 140px;">
+                            Limpar
+                        </button>
+                        <button type="submit" class="btn btn-primary" style="flex:1; min-width: 140px;">
+                            Salvar Cliente
+                        </button>
+                    </div>
+                </form>
+
+                <hr style="margin:30px 0;">
+
+                <h3>Gerenciar Cliente</h3>
+                <form method="GET" action="/editar_cliente">
+                    <div class="form-group">
+                        <label>Selecione um Cliente</label>
+                        <select name="id" required>
+                            <option value="">Selecione...</option>
+                            {% for cliente in clientes %}
+                            <option value="{{ cliente.id }}">{{ cliente.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        Editar / Excluir Cliente
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-inner">
+            <div class="footer-brand">Lumos Livraria</div>
+            <div class="footer-slogan">Histórias que iluminam</div>
+            <div style="font-size:0.82rem;">&copy; 2026</div>
+        </div>
+    </footer>
+
+    <script>
+        function openTab(name, btn) {
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            document.getElementById(name).classList.add('active');
+            btn.classList.add('active');
+        }
+    </script>
+
+</body>
+
+</html>
